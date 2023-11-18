@@ -11,7 +11,7 @@ import gg.rsmod.plugins.content.combat.scripts.impl.*
 
 
 /**
- * Sets the [on_npc_combat] for Aberrant Spectres
+ * Sets the [on_npc_combat] for Abyssal demons
  */
 on_npc_combat(*AbyssalDemonCombatScript.ids) {
     npc.queue {
@@ -34,15 +34,6 @@ on_npc_combat(*AberrantSpectreCombatScript.ids) {
 on_npc_combat(*DragonCombatScript.ids) {
     npc.queue {
         DragonCombatScript.handleSpecialCombat(this)
-    }
-}
-
-/**
- * Sets the [on_npc_combat] for Imps
- */
-on_npc_combat(*ImpCombatScript.ids) {
-    npc.queue {
-        ImpCombatScript.handleSpecialCombat(this)
     }
 }
 
@@ -88,5 +79,13 @@ on_npc_combat(*BloodveldCombatScript.ids) {
 on_npc_combat(*CanifisCitizensCombatScript.ids) {
     npc.queue {
         CanifisCitizensCombatScript.handleSpecialCombat(this)
+    }
+}
+/**
+ * Sets the [on_npc_combat] for KBD
+ */
+on_npc_combat(*KingBlackDragonCombatScript.ids) {
+    npc.queue {
+        KingBlackDragonCombatScript.handleSpecialCombat(this)
     }
 }

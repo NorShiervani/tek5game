@@ -13,7 +13,7 @@ enum class TeleportType(val teleportDelay: Int, val animation: Int, val endAnima
     LUNAR(teleportDelay = 8, animation = 3691, graphic = Graphic(531, 0)),
     ANCIENT(teleportDelay = 8, animation = 9599, graphic = (Graphic(1681, 0))),
     LYRE(teleportDelay = 11, animation = 9600, graphic = Graphic(1682, 0)),
-    SKULL_SCEPTRE(teleportDelay = 8, animation= 9601, graphic = Graphic(1683, 0)),
+    SKULL_SCEPTRE(teleportDelay = 6, animation= 9601, graphic = Graphic(1683, 0)),
     WILDERNESS_OBELISK(teleportDelay = 5, animation = 9602, graphic = Graphic(1690, 0)),
     JEWELRY(teleportDelay = 5, animation = 9603, graphic = Graphic(1684, 0), wildLvlRestriction = 30),
     SPIRIT_TREE(teleportDelay = 6, animation = 7082, graphic = Graphic(129, 0), endAnimation = 7084, endGraphic = Graphic(1229, 0)),
@@ -29,6 +29,5 @@ enum class TeleportType(val teleportDelay: Int, val animation: Int, val endAnima
     DUNGEONEERING_GATESTONE(teleportDelay = 6, animation = 13288, graphic = Graphic(2516,0), endAnimation = 13285, endGraphic = Graphic(2517, 0)),
     RING_OF_KINSHIP(teleportDelay = 11, animation = 13652, graphic = Graphic(2602, 0), endAnimation = 13654, endGraphic = Graphic(2603, 0)),
     SCROLL(teleportDelay = 4, animation = 14293, graphic = Graphic(94, 0)),
-
-
+    OBELISK(teleportDelay = 6, animation = 8939, graphic = Graphic(1690, 0), endAnimation = 8941),
 }

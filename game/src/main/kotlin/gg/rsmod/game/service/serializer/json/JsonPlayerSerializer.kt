@@ -5,14 +5,12 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import de.mkammerer.argon2.Argon2Factory
 import gg.rsmod.game.Server
-import gg.rsmod.game.fs.def.VarbitDef
 import gg.rsmod.game.model.*
 import gg.rsmod.game.model.attr.AttributeKey
 import gg.rsmod.game.model.attr.DOUBLE_ATTRIBUTES
 import gg.rsmod.game.model.attr.LONG_ATTRIBUTES
 import gg.rsmod.game.model.container.ItemContainer
 import gg.rsmod.game.model.entity.Client
-import gg.rsmod.game.model.entity.Player
 import gg.rsmod.game.model.interf.DisplayMode
 import gg.rsmod.game.model.item.Item
 import gg.rsmod.game.model.priv.Privilege
@@ -49,7 +47,9 @@ class JsonPlayerSerializer : PlayerSerializerService() {
     }
 
     override fun loadClientData(client: Client, request: LoginRequest): PlayerLoadResult {
+        client.loginUsername = client.loginUsername.lowercase()
         val save = path.resolve(client.loginUsername)
+
         if (!Files.exists(save)) {
             configureNewPlayer(client, request)
             client.uid = PlayerUID(client.loginUsername)
@@ -150,12 +150,25 @@ class JsonPlayerSerializer : PlayerSerializerService() {
     }
 
     override fun saveClientData(client: Client): Boolean {
-        val data = JsonPlayerSaveData(passwordHash = client.passwordHash, username = client.loginUsername, previousXteas = client.currentXteaKeys,
-                displayName = client.username, x = client.tile.x, z = client.tile.z, height = client.tile.height,
-                privilege = client.privilege.id, runEnergy = client.runEnergy, displayMode = client.interfaces.displayMode.id,
-                appearance = client.getPersistentAppearance(), skills = client.getPersistentSkills(), itemContainers = client.getPersistentContainers(),
-                attributes = client.attr.toPersistentMap(), timers = client.timers.toPersistentTimers(),
-                varps = client.varps.getAll().filter { it.state != 0 })
+        client.loginUsername = client.loginUsername.lowercase() // Convert username to lowercase
+        val data = JsonPlayerSaveData(
+            username = client.loginUsername,
+            passwordHash = client.passwordHash,
+            privilege = client.privilege.id,
+            displayName = client.username,//this order didnt change tho hmm
+            x = client.tile.x,
+            z = client.tile.z,
+            height = client.tile.height,
+            previousXteas = client.currentXteaKeys,
+            displayMode = client.interfaces.displayMode.id,
+            runEnergy = client.runEnergy,
+            appearance = client.getPersistentAppearance(),
+            attributes = client.attr.toPersistentMap(),
+            timers = client.timers.toPersistentTimers(),
+            skills = client.getPersistentSkills(),
+            itemContainers = client.getPersistentContainers(),
+            varps = client.varps.getAll().filter { it.state != 0 }
+        )
         val writer = Files.newBufferedWriter(path.resolve(client.loginUsername))
         val json = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
         json.toJson(data, writer)
