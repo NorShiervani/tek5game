@@ -20,6 +20,7 @@ enum class Food(
     SARDINE(item = Items.SARDINE, heal = 40),
     HERRING(item = Items.HERRING, heal = 50),
     MACKEREL(item = Items.MACKEREL, heal = 60),
+    COD(item = Items.COD, heal = 70),
     TROUT(item = Items.TROUT, heal = 70),
     CAVE_EEL(item = Items.CAVE_EEL, heal = 70),
     PIKE(item = Items.PIKE, heal = 80),
@@ -36,7 +37,8 @@ enum class Food(
     SHARK(item = Items.SHARK, heal = 200),
     SEA_TURTLE(item = Items.SEA_TURTLE, heal = 210),
     MANTA_RAY(item = Items.MANTA_RAY, heal = 220),
-    ROCKTAIL(item = Items.ROCKTAIL, overheal = true),
+    ROCKTAIL(item = Items.ROCKTAIL, heal = 230, overheal = true),
+    CAVEFISH(item = Items.CAVEFISH, heal = 200),
 
     /**
      * Meat.
@@ -58,6 +60,7 @@ enum class Food(
     FAT_SNAIL_MEAT(item = Items.FAT_SNAIL_MEAT, heal = 90),
     CHOMPY(item = Items.COOKED_CHOMPY, heal = 100),
     JUBBLY(item = Items.COOKED_JUBBLY, heal = 150),
+    TOADS_LEGS(item = Items.TOADS_LEGS, heal = 30),
 
 
     /** Sandwiches */
@@ -80,7 +83,8 @@ enum class Food(
     COOKED_FISHCAKE(item = Items.COOKED_FISHCAKE, heal = 110),
 
 
-    /** Kebabs */ //TODO
+    /** Kebabs */ 
+    KEBAB(item = Items.KEBAB, heal = 0, message = ""),
 
     /** Pies */
     REDBERRY_PIE(item = Items.REDBERRY_PIE, heal = 50, replacement = Items.HALF_A_REDBERRY_PIE),

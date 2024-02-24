@@ -107,6 +107,11 @@ val LAST_HIT_ATTR = AttributeKey<WeakReference<Pawn>>()
 val LAST_HIT_BY_ATTR = AttributeKey<WeakReference<Pawn>>()
 
 /**
+ * The amount of ring of forging charges left.
+ */
+val RING_OF_FORGING_CHARGES = AttributeKey<Int>(persistenceKey = "ring_of_forging_charges")
+
+/**
  * The amount of "poison ticks" left before the poison wears off.
  */
 val POISON_TICKS_LEFT_ATTR = AttributeKey<Int>(persistenceKey = "poison_ticks_left")
@@ -397,6 +402,12 @@ val learnedBarbarianHerblore = AttributeKey<Boolean>(persistenceKey = "learned_b
 val completedBarbarianTraining = AttributeKey<Boolean>(persistenceKey = "completed_barbarian_training")
 
 /**
+ * Attributes for Vampyre Slayer
+ */
+val gaveHarlowBeer = AttributeKey<Boolean>(persistenceKey = "gave_harlow_beer")
+val killedCountDraynor = AttributeKey<Boolean>(persistenceKey = "killed_count_draynor")
+
+/**
  * Attributes for the Mage Arena I miniquest.
  */
 val COMPLETED_MAGE_ARENA = AttributeKey<Boolean>(persistenceKey = "completed_mage_arena")
@@ -472,6 +483,17 @@ val SLAYER_AMOUNT = AttributeKey<Int>(persistenceKey = "slayer_amount")
 /**
  * The amount of Slayer monsters left to kill
  */
+val CONSECUTIVE_SLAYER_TASKS = AttributeKey<Int>(persistenceKey = "consecutive_slayer_tasks")
+
+
+/**
+ * The list of block monsters from slayer assignments
+ */
+val BLOCKED_TASKS = AttributeKey<MutableList<String>>("blocked_tasks")
+
+/**
+ * The amount of Slayer monsters left to kill
+ */
 val STARTED_SLAYER = AttributeKey<Boolean>(persistenceKey = "started_slayer")
 
 /**
@@ -485,9 +507,19 @@ val CANOE_VARBIT = AttributeKey<Int>()
 val LOYALTY_POINTS = AttributeKey<Int>(persistenceKey = "loyalty_points")
 
 /**
- * If the player has unlocked the ability to fletch broad arrows/bolts
+ * The amount of slayer points the player has
+ */
+val SLAYER_POINTS = AttributeKey<Int>(persistenceKey = "slayer_points")
+
+/**
+ * Slayer shop ability unlocks
  */
 val BROAD_FLETCHING = AttributeKey<Boolean>(persistenceKey = "broad_fletching")
+val SLAYER_HELM_CREATION = AttributeKey<Boolean>(persistenceKey = "slayer_helm_creation")
+val CRAFT_ROS = AttributeKey<Boolean>(persistenceKey = "craft_ros")
+val QUICK_BLOWS = AttributeKey<Boolean>(persistenceKey = "quick_blows")
+val AQUANTIES = AttributeKey<Boolean>(persistenceKey = "aquanites")
+val ICE_STRYKER_NO_CAPE = AttributeKey<Boolean>(persistenceKey = "ice_stryker_no_cape")
 
 /**
  * The last time a map was built for the player
@@ -498,3 +530,15 @@ val LAST_MAP_BUILD_TIME = AttributeKey<Int>(persistenceKey = "last_map_build")
  * The last slot the player has selected for the random event gift interface
  */
 val RANDOM_EVENT_GIFT_SLOT = AttributeKey<Int>()
+
+/**
+ * The lost city attribute
+ */
+ 
+val HAS_SPAWNED_TREE_SPIRIT = AttributeKey<Int>()
+
+/**
+ * A map containing number of times each NPC has been killed by a player
+ * Since keys are always strings, we must have our key as a String here too
+ */
+val NPC_KILL_COUNTS = AttributeKey<MutableMap<String, Int>>(persistenceKey = "npc_kill_counts")

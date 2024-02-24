@@ -42,7 +42,8 @@ on_login {
     player.setVarp(145, 7)
     player.setVarp(146, 4)
     // slot 16
-    player.setVarbit(6914, 3)
+    // Vampyre Slayer - player.setVarbit(6914, 3)
+    //Done.
     // slot 18
     player.setVarbit(3185, 240)
     // slot 19
@@ -145,8 +146,8 @@ on_login {
     player.setVarp(175, 12)
     // slot 67
     player.setVarp(139, 75)
-    // slot 68
-    player.setVarp(147, 6)
+    // slot 68 - Lost City
+    // Done.
     // slot 69
     player.setVarbit(532, 11)
     // slot 70

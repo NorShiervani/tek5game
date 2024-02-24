@@ -251,6 +251,12 @@ abstract class Player(world: World) : Pawn(world) {
     }
 
     /**
+     * Mining accumulator used for dragon pickaxe
+     */
+
+    var miningAccumulator: Double = 0.0
+
+    /**
      * Returns the player's current lifepoints as an integer value.
      *
      * @return The current lifepoints of the player.
@@ -297,8 +303,11 @@ abstract class Player(world: World) : Pawn(world) {
     }
 
     fun decreasePrayerPoints(value: Int) {
-        varps.setVarbit(world, skills.PRAYER_POINTS_VARBIT, getCurrentPrayerPoints() - value)
+        val currentPrayerPoints = getCurrentPrayerPoints()
+        val newPrayerPoints = if (currentPrayerPoints > value) currentPrayerPoints - value else 0
+        varps.setVarbit(world, skills.PRAYER_POINTS_VARBIT, newPrayerPoints)
     }
+
 
     /**
      * Alters the player's lifepoints by the specified value, with an optional cap value to limit the change.
@@ -372,12 +381,33 @@ abstract class Player(world: World) : Pawn(world) {
      * within a coroutine context.
      *
      * @param task The queue task that this method is called within.
+     * @param animation The animation the player should use while moving.
      * @param movement The forced movement to be applied to the player.
      * @param cycleDuration The number of game cycles to wait before unlocking the player. Defaults to
      *                      `movement.maxDuration / 30`.
      */
+    suspend fun forceMove(task: QueueTask, animation: Animation, movement: ForcedMovement, cycleDuration: Int = movement.maxDuration / 30) {
+        movementQueue.clear()
+
+        if (animation.id != -1)
+            animate(animation.id)
+
+        if (movement.lock != LockState.NONE)
+            lock = movement.lock
+
+        lastTile = Tile(tile)
+        moveTo(movement.finalDestination)
+
+        forceMove(movement)
+
+        task.wait(cycleDuration)
+        if (movement.lock != LockState.NONE)
+            lock = LockState.NONE
+    }
+
     suspend fun forceMove(task: QueueTask, movement: ForcedMovement, cycleDuration: Int = movement.maxDuration / 30) {
         movementQueue.clear()
+
         if (movement.lock != LockState.NONE)
             lock = movement.lock
 
@@ -721,7 +751,7 @@ abstract class Player(world: World) : Pawn(world) {
      * @param modifiers A flag indicating whether to apply modifiers and bonus experience (default is true).
      */
     private var accumulatedTime = 0.0 // Field to store the accumulated time
-    fun addXp(skill: Int, xp: Double, modifiers: Boolean = true) {
+    fun addXp(skill: Int, xp: Double, modifiers: Boolean = true, disableBonusExperience: Boolean = false) {
         val oldXp = skills.getCurrentXp(skill)
         var modifier = interpolate(1.0, 5.0, skills.getMaxLevel(skill))
 
@@ -733,7 +763,7 @@ abstract class Player(world: World) : Pawn(world) {
             return
         }
 
-        if (!world.gameContext.bonusExperience || !modifiers) {
+        if (!world.gameContext.bonusExperience || !modifiers || disableBonusExperience) {
             // apply a 1.0x bonus which does
             // nothing to overall gain
             bonusExperience = 1.0
@@ -868,6 +898,27 @@ abstract class Player(world: World) : Pawn(world) {
     }
 
     /**
+     * Add slayer points to this player
+     */
+    fun addSlayerPoints(amount: Int) {
+        attr[SLAYER_POINTS] = (attr[SLAYER_POINTS] ?: 0) + amount
+    }
+
+    /**
+     * Remove slayer points from this player
+     */
+    fun subtractSlayerPoints(amount: Int) {
+        attr[SLAYER_POINTS] = (attr[SLAYER_POINTS] ?: 0) - amount
+    }
+
+    /**
+     * Get the current count of slayer points for this player
+     */
+    fun getSlayerPointsCount(): Int {
+        return attr[SLAYER_POINTS] ?: 0
+    }
+
+    /**
      * @see largeViewport
      */
     fun hasLargeViewport(): Boolean = largeViewport
@@ -877,6 +928,20 @@ abstract class Player(world: World) : Pawn(world) {
      */
     internal fun closeInterfaceModal() {
         world.plugins.executeModalClose(this)
+    }
+    
+    fun getNpcKillCount(npcId: Int): Int {
+        return attr[NPC_KILL_COUNTS]?.getOrDefault(npcId.toString(), 0) ?: 0
+    }
+    
+    fun getNpcKillCounts(): MutableMap<String, Int> {
+        return attr.getOrDefault(NPC_KILL_COUNTS, mutableMapOf())
+    }
+
+    fun incrementNpcKillCount(npcId: Int, count: Int = 1) {
+        val npcKillCounts = attr.getOrDefault(NPC_KILL_COUNTS, mutableMapOf())
+        npcKillCounts[npcId.toString()] = npcKillCounts.getOrDefault(npcId.toString(), 0) + count
+        attr[NPC_KILL_COUNTS] = npcKillCounts
     }
 
     /**

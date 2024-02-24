@@ -1,30 +1,30 @@
 package gg.rsmod.plugins.content.cmd
 
 import de.mkammerer.argon2.Argon2Factory
+import gg.rsmod.game.fs.def.NpcDef
 import gg.rsmod.game.message.impl.LocAnimMessage
 import gg.rsmod.game.message.impl.LogoutFullMessage
 import gg.rsmod.game.model.attr.*
 import gg.rsmod.game.model.bits.INFINITE_VARS_STORAGE
 import gg.rsmod.game.model.bits.InfiniteVarsType
 import gg.rsmod.game.model.collision.ObjectType
-import gg.rsmod.game.model.entity.Player
 import gg.rsmod.game.model.priv.Privilege
 import gg.rsmod.game.model.region.ChunkCoords
 import gg.rsmod.game.model.timer.ACTIVE_COMBAT_TIMER
 import gg.rsmod.game.service.serializer.PlayerSerializerService
 import gg.rsmod.game.sync.block.UpdateBlockType
-import gg.rsmod.plugins.api.InterfaceDestination
-import gg.rsmod.plugins.api.Skills
 import gg.rsmod.plugins.content.combat.dealHit
 import gg.rsmod.plugins.content.inter.attack.AttackTab
 import gg.rsmod.plugins.content.inter.bank.openBank
 import gg.rsmod.plugins.content.magic.TeleportType
 import gg.rsmod.plugins.content.magic.teleport
 import gg.rsmod.plugins.content.mechanics.multi.MultiService
+import gg.rsmod.plugins.content.npcs.Constants
 import gg.rsmod.plugins.content.skills.farming.core.FarmTicker
 import gg.rsmod.plugins.content.skills.farming.data.SeedType
 import gg.rsmod.util.Misc
 import java.text.DecimalFormat
+import java.text.NumberFormat
 
 on_command("male") {
     player.appearance = Appearance.DEFAULT
@@ -78,29 +78,156 @@ on_command("objanim", Privilege.ADMIN_POWER) {
 
 
 on_command("players") {
+    // Count the total number of players online
     val count = world.players.count()
+    // Map to store player IDs and their corresponding Player objects
+    val playersMap = mutableMapOf<Int, Player>()
+    // Populate playersMap with player IDs and their Player objects
+    world.players.forEach { p ->
+        playersMap[playersMap.size] = p
+    }
+    // Check if the player initiating the command is not in combat and not interacting with an interface
     if (!player.timers.has(ACTIVE_COMBAT_TIMER) && player.interfaces.currentModal == -1) {
+        // Open scroll interface to display player information
         player.openInterface(dest = InterfaceDestination.MAIN_SCREEN_FULL, interfaceId = 275)
+
+        // Hide a specific component in the interface
         player.setComponentHidden(interfaceId = 275, component = 14, hidden = true)
+
+        // Set the count of online players in a specific component of the interface
         player.setComponentText(interfaceId = 275, component = 2, "Players Online: $count")
+
+        // Clear components 16 to 315 to prepare for displaying player information
         for (i in 16..315) {
             player.setComponentText(interfaceId = 275, component = i, "")
         }
-
-        val playersMap = mutableMapOf<Int, Player>()
-        world.players.forEach { p ->
-            playersMap[playersMap.size] = p
-        }
-
+        // Display player information in the interface for each player
         playersMap.forEach { (i, p) ->
-            player.setComponentText(interfaceId = 275, component = 17 + i,  Misc.formatForDisplay(p.username))
+            // Determine privilege icon based on player's privilege level
+            val icon = when (p.privilege.id) {
+                1 -> "<img=0>" //pmods
+                2, 3 -> "<img=1>" //owners and moderators
+                else -> ""       // Default case (no icon)
+            }
+            // Set player information in the interface
+            player.setComponentText(interfaceId = 275, component = 17 + i,  "$icon ${Misc.formatForDisplay(p.username)}")
+        }
+    } else {
+        // If the player is in combat or interacting with an interface
+        if (count == 1) {
+            // Display the count of players when only one player is online
+            player.message("There is currently 1 player online.")
+        } else {
+            // Display the count of players and show information for the first 5 players
+            player.message("There are currently $count players online. Showing first 5 players.")
+            playersMap.values.take(5).forEach { p ->
+                // Determine privilege icon for each player and display their username
+                val icon = when (p.privilege.id) {
+                    1 -> "<img=0>"
+                    2, 3 -> "<img=1>"
+                    else -> ""
+                }
+                player.message(" - $icon ${Misc.formatForDisplay(p.username)}")
+            }
         }
     }
-    player.message("There is currently $count ${if (count > 1) "players" else "player"} online.")
+}
+
+on_command("locate") {
+    // Get command arguments
+    val args = player.getCommandArgs()
+    // Validate command usage and arguments
+    tryWithUsage(player, args, "Invalid format! Example of proper command <col=42C66C>::locate username</col>") { values ->
+        // Find the player object based on the provided username
+        val p = world.getPlayerForName(values[0].replace("_", " ")) ?: return@tryWithUsage
+        // Get the area name where the player is located
+        val areaName = getAreaName(p)
+        // Determine privilege icon based on player's privilege level
+        val icon = when (p.privilege.id) {
+            1 -> "<img=0>" // Represents a specific privilege level (pmod)
+            2, 3 -> "<img=1>" // Represents another privilege level (admin, owner)
+            else -> ""       // Default case (no icon)
+        }
+        player.message("Player $icon<col=42C66C>${Misc.formatForDisplay(p.username)}</col> is in: <col=1A43bf>$areaName</col>.")
+    }
 }
 
 on_command("yell") {
     player.message("To talk in the global chat, start your message in public chat with a period (.)", ChatMessageType.CONSOLE)
+}
+
+val bossKcCommands = listOf("bosskills", "bosskc")
+val slayerKcCommands = listOf("slayerkills", "slayerkc")
+
+bossKcCommands.forEach { command ->
+    on_command(command) {
+        val bossKillCounts = mutableMapOf<String, Int>()
+        Constants.BOSS_NPC_IDS.forEach { npcId ->
+            var npcName = ""
+            if (npcId == Constants.BARROWS_CHEST_ID) {
+                npcName = "Barrows Chests"
+            } else {
+                val npcDef = player.world.definitions.get(NpcDef::class.java, npcId)
+                npcName = npcDef.name
+            }
+            bossKillCounts[npcName] = player.getNpcKillCount(npcId)
+        }
+        displayKillCounts(player, bossKillCounts, "Boss Kill Counts")
+    }
+}
+
+slayerKcCommands.forEach { command ->
+    on_command(command) {
+        val slayerKillCounts = mutableMapOf<String, Int>()
+        Constants.SLAYER_NPC_IDS.forEach { npcId ->
+            val npcDef = player.world.definitions.get(NpcDef::class.java, npcId)
+            val npcName = npcDef.name
+            //Slayer NPCs can have multiple IDs, so let's combine the counts
+            slayerKillCounts[npcName] = slayerKillCounts.getOrDefault(npcName, 0) + player.getNpcKillCount(npcId)
+        }
+        displayKillCounts(player, slayerKillCounts, "Slayer Kill Counts")
+    }
+}
+
+val checkNpcKillCommands = listOf("kc", "kills", "checknpckill", "checknpckills")
+
+checkNpcKillCommands.forEach { command ->
+    on_command(command) {
+        val arguments = player.getCommandArgs()
+        if (arguments.isNotEmpty()) {
+            val npcInput = arguments.joinToString(" ").toLowerCase()
+
+            try {
+                // Try to parse as an ID
+                val npcId = npcInput.toInt()
+                val killCount = player.getNpcKillCount(npcId)
+                val npcDef = player.world.definitions.get(NpcDef::class.java, npcId)
+                val npcName = npcDef.name
+                player.message("Kill count for $npcName: ${NumberFormat.getNumberInstance().format(killCount as Int)}")
+            } catch (e: NumberFormatException) {
+                // If not an ID, treat as a name
+                val allNpcDefs = player.world.definitions.getAll(NpcDef::class.java) as Map<Int, NpcDef>
+                val matchingDefs = allNpcDefs.filter { (_, def) -> def.name.toLowerCase().startsWith(npcInput) }
+
+                if (matchingDefs.isEmpty()) {
+                    player.message("No NPCs found with the name: $npcInput")
+                } else {
+                    val results = matchingDefs.mapNotNull { (id, def) ->
+                        val killCount = player.getNpcKillCount(id)
+                        if (killCount > 0) "Kill count for ${def.name} (ID: $id): ${NumberFormat.getNumberInstance().format(killCount as Int)}" else null
+                    }
+
+                    if (results.isEmpty()) {
+                        player.message("Kill count for $npcInput: 0")
+                    } else {
+                        results.forEach(player::message)
+                    }
+                }
+            }
+        } else {
+            player.message("Please provide an NPC ID or name.")
+        }
+    }
 }
 
 on_command("addloyalty", Privilege.ADMIN_POWER) {
@@ -116,6 +243,21 @@ on_command("addloyalty", Privilege.ADMIN_POWER) {
         p.message("You have been granted ${Misc.formatWithIndefiniteArticle("loyalty point", amount)}, as a thank you for your contributions.")
     }
 }
+
+on_command("addslayerpoints", Privilege.ADMIN_POWER) {
+    val args = player.getCommandArgs()
+    tryWithUsage(
+        player,
+        args,
+        "Invalid format! Example of proper command <col=42C66C>::addslayerpoints alycia 1</col>"
+    ) { values ->
+        val p = world.getPlayerForName(values[0].replace("_", " ")) ?: return@tryWithUsage
+        val amount = if (values.size > 1) Math.min(Int.MAX_VALUE.toLong(), values[1].parseAmount()).toInt() else 1
+        p.addSlayerPoints(amount)
+        p.message("You have been given ${Misc.formatWithIndefiniteArticle("slayer point", amount)}.")
+    }
+}
+
 
 on_command("damage", Privilege.ADMIN_POWER) {
     val args = player.getCommandArgs()
@@ -198,7 +340,7 @@ on_command("reboot", Privilege.ADMIN_POWER) {
     }
 }
 
-on_command("kick", Privilege.ADMIN_POWER) {
+on_command("kick", Privilege.MOD_POWER) {
     val args = player.getCommandArgs()
     tryWithUsage(player, args, "Invalid format! Example of proper command <col=42C66C>::kick alycia</col>") { values ->
         val p = world.getPlayerForName(values[0].replace("_", " ")) ?: return@tryWithUsage
@@ -246,7 +388,7 @@ on_command("rate") {
     }
 }
 
-on_command("home", Privilege.ADMIN_POWER) {
+on_command("home", Privilege.MOD_POWER) {
     val home = world.gameContext.home
     player.moveTo(home)
 }
@@ -816,6 +958,65 @@ on_command("give", Privilege.ADMIN_POWER) {
     }
 }
 
+on_command("get_item_look", Privilege.ADMIN_POWER) {
+    val args = player.getCommandArgs()
+    tryWithUsage(
+        player,
+        args,
+        "Invalid format! Example of proper command <col=42C66C>::get_item_look item_name</col>"
+    ) { values ->
+        val itemName = values[0].replace("_", " ")
+        var foundItem = false
+        for (i in 0 until world.definitions.getCount(ItemDef::class.java)) {
+            val def = world.definitions.getNullable(ItemDef::class.java, i)
+            if (def != null && def.name.equals(itemName, ignoreCase = true)) {
+                // Fetch appearanceId using getEquipId method
+                val appearanceId = def.appearanceId
+
+                // Displaying only appearanceId information
+                player.message("AppearanceId for <col=42C66C>${def.name}</col> (Id: <col=42C66C>$i</col>) is <col=42C66C>$appearanceId</col>", type = ChatMessageType.CONSOLE)
+
+                foundItem = true
+                break
+            }
+        }
+        if (!foundItem) {
+            player.message("Item <col=e20f00>$itemName</col> does not exist in cache.", type = ChatMessageType.CONSOLE)
+        }
+    }
+}
+
+on_command("set_item_look", Privilege.ADMIN_POWER) {
+    val args = player.getCommandArgs()
+    tryWithUsage(
+        player,
+        args,
+        "Invalid format! Example of proper command <col=42C66C>::set_item_look item_id new_appearance_id</col>"
+    ) { values ->
+        if (values.size < 2) {
+            player.message("Invalid number of arguments. Usage: ::set_item_look item_id new_appearance_id", type = ChatMessageType.CONSOLE)
+            return@tryWithUsage
+        }
+
+        val itemId = values[0].toIntOrNull()
+        val newAppearanceId = values[1].toIntOrNull()
+
+        if (itemId == null || newAppearanceId == null) {
+            player.message("Invalid arguments. Both item_id and new_appearance_id must be integers.", type = ChatMessageType.CONSOLE)
+            return@tryWithUsage
+        }
+
+        val itemDef = world.definitions.getNullable(ItemDef::class.java, itemId)
+        if (itemDef == null) {
+            player.message("Item with ID <col=e20f00>$itemId</col> does not exist.", type = ChatMessageType.CONSOLE)
+        } else {
+            // Update the appearanceId
+            itemDef.appearanceId = newAppearanceId
+            player.message("Updated appearanceId of item <col=42C66C>${itemDef.name}</col> (Id: <col=42C66C>$itemId</col>) to <col=42C66C>$newAppearanceId</col>", type = ChatMessageType.CONSOLE)
+        }
+    }
+}
+
 on_command("food", Privilege.ADMIN_POWER) {
     player.inventory.add(item = Items.MANTA_RAY, amount = player.inventory.freeSlotCount)
 }
@@ -1024,6 +1225,23 @@ on_command("shop", Privilege.ADMIN_POWER) {
     player.openShop("Edgeville General Store")
 }
 
+fun displayKillCounts(player: Player, killCounts: Map<String, Int>, title: String) {
+    //Open interface
+    player.openInterface(dest = InterfaceDestination.MAIN_SCREEN_FULL, interfaceId = 275)
+    player.setComponentText(interfaceId = 275, component = 2, title)
+
+    //Clear components for displaying data
+    for (i in 16..315) {
+        player.setComponentText(interfaceId = 275, component = i, "")
+    }
+
+    //Display kill counts
+    killCounts.entries.forEachIndexed { index, (npcName, count) ->
+        player.setComponentText(interfaceId = 275, component = 17 + index, "$npcName: ${NumberFormat.getNumberInstance().format(count)}")
+    }
+}
+
+
 fun tryWithUsage(player: Player, args: Array<String>, failMessage: String, tryUnit: Function1<Array<String>, Unit>) {
     try {
         tryUnit.invoke(args)
@@ -1042,4 +1260,146 @@ fun getArgumentLine(args: Array<String>, offset: Int, length: Int): String {
         sb.append(args[i])
     }
     return sb.toString()
+}
+// Function to retrieve the player's area name based on region ID
+fun getAreaName(player: Player): String {
+    // Get the region ID of the player's current tile
+    return when (player.tile.regionId) {
+        // Begin Region Mapping
+        9270 ->
+            "Eagles' Peak"
+        9526, 9782, 9525, 9781, 9780 ->
+            "Tree Gnome Stronghold"
+        10039 ->
+            "Barbarian Outpost"
+        10038, 10036, 10037, 10294 ->
+            "Kandarin"
+        10293, ->
+            "Fishing Guild"
+        9779, 10035 ->
+            "West Ardougne"
+        10291, 10547, 10292, 10548 ->
+            "East Ardougne"
+        10803 ->
+            "Witchaven"
+        10804 ->
+            "Legends' Guild"
+        10549 ->
+            "Ranging Guild"
+        10550 ->
+            "McGrubor's Wood"
+        10806, 10805 ->
+            "Seers' Village"
+        11061, 11062, 11317 ->
+            "Catherby"
+        10033 ->
+            "Tree Gnome Village"
+        10032, 10288 ->
+            "Yanille"
+        10545 ->
+            "Port Khazard"
+        10802, 10801, 11058, 11057, 11313, 11569, 10645, 10644, 10900, 10899, 10901 ->
+            "Brimhaven"
+        11056, 11312, 11568, 11055, 11311, 11567, 11823, 11054, 11566, 11822, 11053, 11309, 11565, 11821 ->
+            "Karamja"
+        11310 ->
+            "Shilo Village"
+        11318 ->
+            "White Wolf Mountain"
+        11319, 11575 ->
+            "Burthorpe"
+        11574, 11573 ->
+            "Taverley"
+        11830 ->
+            "Near Goblin Village"
+        12086 ->
+            "Edgeville Monastery"
+        12342 ->
+            "Edgeville"
+        12598 ->
+            "Grand Exchange"
+        12854 ->
+            "Near Varrock Palace"
+        13110 ->
+            "Lumber Yard"
+        11829 ->
+            "North of Falador"
+        11828, 12084, 11827 ->
+            "Falador"
+        12083 ->
+            "Falador Farm"
+        11570, 11826 ->
+            "Rimmington"
+        12082, 12081 ->
+            "Port Sarim"
+        11825, 11824 ->
+            "Mudskipper Point"
+        12337 ->
+            "Wizards' Tower"
+        12085 ->
+            "Near Dwarven Mine"
+        12341 ->
+            "Barbarian Village"
+        12597 ->
+            "West Varrock"
+        12853 ->
+            "East Varrock"
+        13109 ->
+            "East of Varrock"
+        12596 ->
+            "Near Champions' Guild"
+        12852 ->
+            "South of Varrock"
+        13108 ->
+            "South east of Varrock"
+        12593, 12849, 12693, 12949 ->
+            "Lumbridge Swamp"
+        12850, 12851, 12595, 12950, 13206 ->
+            "Lumbridge"
+        12594 ->
+            "Behind Lumbridge Castle"
+        12338, 12339 ->
+            "Draynor Village"
+        12340 ->
+            "Near Draynor Manor"
+        13107 ->
+            "Al Kharid Mine"
+        13363 ->
+            "Mage Training Arena"
+        13362 ->
+            "Duel Arena"
+        13106, 13105, 13361 ->
+            "Al Kharid"
+        12591, 12590, 12589, 12588, 12587, 12848, 12847, 12846, 12845, 12844, 12843, 13104, 13103, 13102, 13101, 13100,
+            13099, 13355, 13356, 13357, 13358, 13359, 13360, 13872, 13871, 13870 ->
+            "Kharidian Desert"
+        13366, 13622 ->
+            "Paterdomus"
+        13623 ->
+            "Slayer Tower"
+        13878 ->
+            "Canifis"
+        13879, 13621, 13877, 13620, 13876, 13619, 13875, 13618, 13874, 13873, 14129, 14130, 14133, 14134, 14135, 14389,
+            14390, 14391 ->
+            "Morytania"
+        14131, 14231 ->
+            "Barrows"
+        14385, 14386, 14387, 14388, 14132, 14642, 14644 ->
+            "Meiyerditch"
+        14647, 14646, 14645 ->
+            "Port Phasmatys"
+        11417, 11673, 11416, 11672, 11671, 11928 ->
+            "Taverley Dungeon"
+        11929, 12185, 12184, 12183, 11927 ->
+            "Dwarven Mine"
+        12444, 12443, 12442, 12186, 12441, 12698, 12954, 13210 ->
+            "Edgeville Dungeon"
+        11831, 11832, 11833, 11834, 11835, 11836, 11837, 12087, 12089, 12090, 12091, 12092, 12093, 12343, 12344, 12345,
+            12346, 12347, 12348, 12349, 12599, 12600, 12601, 12602, 12603, 12604, 12605, 12855, 12856, 12857, 12858, 12859,
+                12860, 12861, 13111, 13112, 13113, 13114, 13115, 13116, 13117, 13367, 13368, 13369, 13370, 13371, 13372, 13373 ->
+            "the Wilderness"
+        // End Region Mapping
+        else -> "Unknown Area, Region ID: " + player.tile.regionId
+            //if region ID returns any value not in this mapping, displays this string.
+    }
 }
