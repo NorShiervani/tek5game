@@ -1,6 +1,7 @@
-<p align="center"><img src="https://cdn.discordapp.com/attachments/1067274729205010463/1082144752985702451/2011scapelogo.png" alt="2011scape Logo Image - Open Source GitHub Repository for 2011Scape" />
+<p align="center"><img src="https://github.com/2011Scape/installation-guide/assets/75695035/6b99c832-6d62-4811-bdda-143d72c13c7a" alt="2011scape Logo Image - Open Source GitHub Repository for 2011Scape" />
 
-<img src="https://cdn.discordapp.com/attachments/1067274729205010463/1082144013475397702/image.png" alt="2011scape Banner Screenshot Image - Player woodcutting maple trees." /></p>
+<img src="https://github.com/2011Scape/game/assets/75695035/db690407-bc57-437a-aa86-f692f9983bbe" alt="2011scape Banner Screenshot Image - Player woodcutting maple trees." /></p>
+
 
 [![license][license-badge]][isc] [![discord-badge]][discord] [![gitpod-badge]][gitpod]
 
@@ -27,7 +28,7 @@ This repository hosts the game server files which contain all of our relevant pl
 - [Lost City, 2004 Emulator](https://discord.gg/hN3tHUmZEN)
 - [2009Scape, 2009 Emulator](https://2009scape.org)
 
-[isc]: https://opensource.org/licenses/LGPL-3.0
+[isc]: https://opensource.org/license/apache-2-0
 [license]: https://github.com/2011Scape/game/blob/main/LICENSE
 [license-badge]: https://img.shields.io/badge/license-ISC-informational
 
